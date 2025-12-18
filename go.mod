@@ -1,6 +1,6 @@
 module github.com/LLionNg/shopee-livestream-bot
 
-go 1.25.5
+go 1.21
 
 require (
 	github.com/chromedp/cdproto v0.0.0-20231205062650-00455a960d61
