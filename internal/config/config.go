@@ -53,12 +53,8 @@ type ViewportConfig struct {
 }
 
 type PurchaseConfig struct {
-	MaxRetries      int    `mapstructure:"max_retries"`
-	RetryDelay      int    `mapstructure:"retry_delay"`
-	CheckoutTimeout int    `mapstructure:"checkout_timeout"`
-	AutoCheckout    bool   `mapstructure:"auto_checkout"`
-	PreFillCart     bool   `mapstructure:"pre_fill_cart"`
-	PaymentMethod   string `mapstructure:"payment_method"`
+	MaxRetries int `mapstructure:"max_retries"`
+	RetryDelay int `mapstructure:"retry_delay"`
 }
 
 type ProxyConfig struct {
@@ -166,11 +162,6 @@ func (c *BrowserConfig) GetTimeout() time.Duration {
 // GetRetryDelay returns retry delay as duration
 func (c *PurchaseConfig) GetRetryDelay() time.Duration {
 	return time.Duration(c.RetryDelay) * time.Second
-}
-
-// GetCheckoutTimeout returns checkout timeout as duration
-func (c *PurchaseConfig) GetCheckoutTimeout() time.Duration {
-	return time.Duration(c.CheckoutTimeout) * time.Second
 }
 
 // GetCheckInterval returns monitoring check interval as duration

@@ -26,12 +26,8 @@ browser:
 purchase:
   max_retries: 3
   retry_delay: 1  # seconds
-  checkout_timeout: 5  # seconds
-  
-  auto_checkout: true
-  pre_fill_cart: true
-  
-  payment_method: "ShopeePay"  # or "COD", "Credit Card"
+  # Note: Items are automatically reserved once added to cart during livestream
+  # No payment/checkout is performed - just add to cart
 
 proxy:
   enabled: true
