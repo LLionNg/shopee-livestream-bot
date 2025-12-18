@@ -37,15 +37,22 @@ func Initialize(ctx context.Context, cfg *config.Config) (context.Context, conte
 	opts = append(opts, getStealthOptions()...)
 
 	// Create allocator context
-	allocCtx, _ := chromedp.NewExecAllocator(ctx, opts...)
+	allocCtx, allocCancel := chromedp.NewExecAllocator(ctx, opts...)
 
 	// Create browser context
-	browserCtx, cancel := chromedp.NewContext(allocCtx, chromedp.WithLogf(func(string, ...interface{}) {}))
+	browserCtx, browserCancel := chromedp.NewContext(allocCtx, chromedp.WithLogf(func(string, ...interface{}) {}))
 
 	// Set timeout
-	browserCtx, _ = context.WithTimeout(browserCtx, cfg.Browser.GetTimeout())
+	browserCtx, timeoutCancel := context.WithTimeout(browserCtx, cfg.Browser.GetTimeout())
 
-	return browserCtx, cancel
+	// Return a combined cancel function that cleans up all contexts
+	combinedCancel := func() {
+		timeoutCancel()
+		browserCancel()
+		allocCancel()
+	}
+
+	return browserCtx, combinedCancel
 }
 
 // getStealthOptions returns options to avoid bot detection

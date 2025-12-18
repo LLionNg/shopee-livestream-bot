@@ -7,19 +7,19 @@ import (
 	"os"
 	"time"
 
-	"github.com/chromedp/cdproto/network"
-	"github.com/chromedp/chromedp"
 	"github.com/LLionNg/shopee-livestream-bot/internal/browser"
 	"github.com/LLionNg/shopee-livestream-bot/internal/config"
+	"github.com/chromedp/cdproto/network"
+	"github.com/chromedp/chromedp"
 )
 
 // Manager handles authentication and session management
 type Manager struct {
-	ctx           context.Context
-	cfg           *config.Config
-	sessionFile   string
-	cookies       []*network.Cookie
-	isLoggedIn    bool
+	ctx         context.Context
+	cfg         *config.Config
+	sessionFile string
+	cookies     []*network.Cookie
+	isLoggedIn  bool
 }
 
 // NewManager creates a new authentication manager
@@ -50,7 +50,7 @@ func (m *Manager) Login() error {
 func (m *Manager) PerformLogin() error {
 	// Navigate to Shopee login page
 	loginURL := m.cfg.Shopee.BaseURL + "/buyer/login"
-	
+
 	if err := browser.NavigateWithRetry(m.ctx, loginURL, 3); err != nil {
 		return fmt.Errorf("failed to navigate to login page: %w", err)
 	}
@@ -123,7 +123,7 @@ func (m *Manager) SaveSession() error {
 	// Get all cookies
 	var cookies []*network.Cookie
 	if err := chromedp.Run(m.ctx, chromedp.ActionFunc(func(ctx context.Context) error {
-		c, err := network.GetAllCookies().Do(ctx)
+		c, err := network.GetCookies().Do(ctx)
 		if err != nil {
 			return err
 		}
@@ -179,7 +179,6 @@ func (m *Manager) LoadSession() bool {
 				WithPath(cookie.Path).
 				WithHTTPOnly(cookie.HTTPOnly).
 				WithSecure(cookie.Secure).
-				WithExpires(network.TimeSinceEpoch(cookie.Expires)).
 				Do(ctx); err != nil {
 				return err
 			}
@@ -239,10 +238,10 @@ func (m *Manager) Logout() error {
 
 	// Delete session file
 	os.Remove(m.sessionFile)
-	
+
 	m.isLoggedIn = false
 	m.cookies = nil
-	
+
 	return nil
 }
 
@@ -256,9 +255,9 @@ func (m *Manager) RefreshSession() error {
 
 // helper function
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && s[:len(substr)] == substr || 
-	       len(s) > len(substr) && s[len(s)-len(substr):] == substr ||
-	       len(s) > len(substr) && findSubstring(s, substr)
+	return len(s) >= len(substr) && s[:len(substr)] == substr ||
+		len(s) > len(substr) && s[len(s)-len(substr):] == substr ||
+		len(s) > len(substr) && findSubstring(s, substr)
 }
 
 func findSubstring(s, substr string) bool {
