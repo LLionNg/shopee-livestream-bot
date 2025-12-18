@@ -3,6 +3,7 @@ package browser
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/chromedp/chromedp"
@@ -11,16 +12,42 @@ import (
 
 // Initialize creates and configures a browser context
 func Initialize(ctx context.Context, cfg *config.Config) (context.Context, context.CancelFunc) {
-	// Prepare Chrome options
+	// Create user data directory if it doesn't exist
+	if cfg.Browser.UserDataDir != "" {
+		if err := ensureDir(cfg.Browser.UserDataDir); err != nil {
+			fmt.Printf("Warning: Failed to create user data directory: %v\n", err)
+		}
+	}
+
+	// Find Chrome executable path (Windows-specific)
+	chromePath := findChrome()
+	if chromePath != "" {
+		fmt.Printf("Found Chrome at: %s\n", chromePath)
+	}
+
+	// Build Chrome options from scratch to have full control
 	opts := []chromedp.ExecAllocatorOption{
 		chromedp.NoFirstRun,
 		chromedp.NoDefaultBrowserCheck,
-		chromedp.DisableGPU,
+		chromedp.Flag("disable-blink-features", "AutomationControlled"),
+		chromedp.Flag("enable-automation", false),
+		chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+		chromedp.WindowSize(cfg.Browser.Viewport.Width, cfg.Browser.Viewport.Height),
 	}
 
-	// Add headless mode if configured
+	// Add Chrome executable path if found
+	if chromePath != "" {
+		opts = append(opts, chromedp.ExecPath(chromePath))
+	}
+
+	// Explicitly control headless mode
 	if cfg.Browser.Headless {
-		opts = append(opts, chromedp.Headless)
+		fmt.Println("Running in HEADLESS mode")
+		opts = append(opts, chromedp.Flag("headless", true))
+	} else {
+		fmt.Println("Running in VISIBLE mode (window should appear)")
+		// Explicitly disable headless to ensure window shows
+		opts = append(opts, chromedp.Flag("headless", false))
 	}
 
 	// Add user data directory for session persistence
@@ -28,26 +55,30 @@ func Initialize(ctx context.Context, cfg *config.Config) (context.Context, conte
 		opts = append(opts, chromedp.UserDataDir(cfg.Browser.UserDataDir))
 	}
 
-	// Add window size
-	opts = append(opts,
-		chromedp.WindowSize(cfg.Browser.Viewport.Width, cfg.Browser.Viewport.Height),
-	)
-
-	// Add stealth options to avoid detection
-	opts = append(opts, getStealthOptions()...)
-
 	// Create allocator context
 	allocCtx, allocCancel := chromedp.NewExecAllocator(ctx, opts...)
 
 	// Create browser context
 	browserCtx, browserCancel := chromedp.NewContext(allocCtx, chromedp.WithLogf(func(string, ...interface{}) {}))
 
-	// Set timeout
-	browserCtx, timeoutCancel := context.WithTimeout(browserCtx, cfg.Browser.GetTimeout())
+	// Actually start the browser and navigate to a page to make window visible
+	// This ensures Chrome is launched and visible before we return
+	fmt.Println("Launching Chrome browser and opening window...")
+	err := chromedp.Run(browserCtx,
+		chromedp.Navigate("about:blank"),
+		chromedp.Sleep(500*time.Millisecond), // Give window time to appear
+	)
+	if err != nil {
+		browserCancel()
+		allocCancel()
+		fmt.Printf("❌ Failed to start browser: %v\n", err)
+		fmt.Println("Make sure Chrome is installed and accessible")
+		return nil, func() {}
+	}
+	fmt.Println("✅ Chrome browser window should now be visible")
 
 	// Return a combined cancel function that cleans up all contexts
 	combinedCancel := func() {
-		timeoutCancel()
 		browserCancel()
 		allocCancel()
 	}
@@ -83,16 +114,27 @@ func getStealthOptions() []chromedp.ExecAllocatorOption {
 func NavigateWithRetry(ctx context.Context, url string, maxRetries int) error {
 	var err error
 	for i := 0; i < maxRetries; i++ {
-		err = chromedp.Run(ctx,
+		// Create a timeout context for this navigation attempt
+		navCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+
+		err = chromedp.Run(navCtx,
 			chromedp.Navigate(url),
 			chromedp.WaitReady("body", chromedp.ByQuery),
 		)
+
+		cancel() // Clean up the timeout context
+
 		if err == nil {
 			return nil
 		}
-		time.Sleep(time.Duration(i+1) * time.Second)
+
+		fmt.Printf("Navigation attempt %d/%d failed: %v\n", i+1, maxRetries, err)
+
+		if i < maxRetries-1 {
+			time.Sleep(time.Duration(i+1) * time.Second)
+		}
 	}
-	return fmt.Errorf("failed to navigate after %d retries: %w", maxRetries, err)
+	return fmt.Errorf("failed to navigate to %s after %d retries: %w", url, maxRetries, err)
 }
 
 // WaitForElement waits for an element to be visible
@@ -197,4 +239,32 @@ func WaitForNavigation(ctx context.Context) error {
 	return chromedp.Run(ctx,
 		chromedp.WaitReady("body", chromedp.ByQuery),
 	)
+}
+
+// ensureDir creates a directory if it doesn't exist
+func ensureDir(dir string) error {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return os.MkdirAll(dir, 0755)
+	}
+	return nil
+}
+
+// findChrome attempts to find Chrome executable on Windows
+func findChrome() string {
+	// Common Chrome installation paths on Windows
+	paths := []string{
+		os.Getenv("PROGRAMFILES") + "\\Google\\Chrome\\Application\\chrome.exe",
+		os.Getenv("PROGRAMFILES(X86)") + "\\Google\\Chrome\\Application\\chrome.exe",
+		os.Getenv("LOCALAPPDATA") + "\\Google\\Chrome\\Application\\chrome.exe",
+		"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+		"C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+	}
+
+	for _, path := range paths {
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+
+	return "" // Let chromedp use default search
 }

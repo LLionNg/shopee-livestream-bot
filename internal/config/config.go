@@ -126,6 +126,17 @@ func Load(configPath string) (*Config, error) {
 	cfg.Shopee.Credentials.Password = getEnv("SHOPEE_PASSWORD", cfg.Shopee.Credentials.Password)
 	cfg.Shopee.Credentials.Phone = getEnv("SHOPEE_PHONE", cfg.Shopee.Credentials.Phone)
 
+	// Clear placeholder values if they weren't replaced
+	if cfg.Shopee.Credentials.Username == "${SHOPEE_USERNAME}" {
+		cfg.Shopee.Credentials.Username = ""
+	}
+	if cfg.Shopee.Credentials.Password == "${SHOPEE_PASSWORD}" {
+		cfg.Shopee.Credentials.Password = ""
+	}
+	if cfg.Shopee.Credentials.Phone == "${SHOPEE_PHONE}" {
+		cfg.Shopee.Credentials.Phone = ""
+	}
+
 	// Validate configuration
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
@@ -142,9 +153,7 @@ func (c *Config) Validate() error {
 	if len(c.Shopee.LivestreamURLs) == 0 {
 		return fmt.Errorf("at least one livestream URL is required")
 	}
-	if c.Shopee.Credentials.Username == "" {
-		return fmt.Errorf("shopee credentials are required")
-	}
+	// Credentials are optional - manual login will be used if not provided
 	if c.Browser.Timeout <= 0 {
 		c.Browser.Timeout = 30
 	}

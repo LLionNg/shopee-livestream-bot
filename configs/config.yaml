@@ -7,7 +7,7 @@ shopee:
   base_url: "https://shopee.co.th"
   api_url: "https://shopee.co.th/api/v4"
   livestream_urls:
-    - "https://live.shopee.co.th/..."
+    - "https://th.shp.ee/G6rf3EN"
   
   credentials:
     username: "${SHOPEE_USERNAME}"
@@ -17,8 +17,8 @@ shopee:
 browser:
   headless: false  # Set to true for production
   timeout: 30
-  user_data_dir: "./data/browser"
-  
+  user_data_dir: ""  # Temporarily disabled to test
+
   viewport:
     width: 1920
     height: 1080

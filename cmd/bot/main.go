@@ -47,7 +47,12 @@ func main() {
 	// Initialize browser
 	log.Info("Initializing browser...")
 	browserCtx, browserCancel := browser.Initialize(ctx, cfg)
+	if browserCtx == nil {
+		log.Fatal("Failed to initialize browser - please check Chrome installation")
+	}
 	defer browserCancel()
+
+	log.Info("Browser initialized successfully")
 
 	// Initialize authentication
 	log.Info("Authenticating with Shopee...")

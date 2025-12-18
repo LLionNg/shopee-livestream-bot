@@ -36,14 +36,93 @@ func NewManager(ctx context.Context, cfg *config.Config) *Manager {
 func (m *Manager) Login() error {
 	// Try to load existing session first
 	if m.LoadSession() {
+		fmt.Println("📂 Found existing session, validating...")
 		if m.ValidateSession() {
+			fmt.Println("✅ Session is valid! Logged in successfully.")
 			m.isLoggedIn = true
 			return nil
 		}
+		fmt.Println("⚠️  Session expired, need to login again")
 	}
 
-	// Perform fresh login
+	// Check if we have credentials for automatic login
+	fmt.Printf("🔐 Checking credentials - Username: '%s', Password: '%s'\n", m.cfg.Shopee.Credentials.Username, "***")
+	if m.cfg.Shopee.Credentials.Username == "" || m.cfg.Shopee.Credentials.Password == "" {
+		fmt.Println("📝 No credentials provided - using MANUAL login mode")
+		fmt.Println("   You can login with any method: Facebook, Google, Username/Password, etc.")
+		return m.ManualLogin()
+	}
+
+	// Perform automatic login with credentials
+	fmt.Println("🔑 Credentials found - using AUTOMATIC login mode")
 	return m.PerformLogin()
+}
+
+// ManualLogin guides user to login manually (supports any method including OAuth)
+func (m *Manager) ManualLogin() error {
+	// Navigate to Shopee login page
+	loginURL := m.cfg.Shopee.BaseURL + "/buyer/login"
+
+	fmt.Printf("🔄 Navigating to login page: %s\n", loginURL)
+
+	if err := browser.NavigateWithRetry(m.ctx, loginURL, 3); err != nil {
+		return fmt.Errorf("failed to navigate to login page: %w", err)
+	}
+
+	fmt.Println("🌐 Browser opened to Shopee login page")
+	fmt.Println("👉 Please login manually using any method (Username/Password, Facebook, Google, etc.)")
+	fmt.Println("⏳ Waiting for you to complete login...")
+	fmt.Println("   (The bot will automatically detect when you're logged in)")
+
+	// Poll every 2 seconds to check if user has logged in
+	maxWaitTime := 5 * time.Minute
+	checkInterval := 2 * time.Second
+	startTime := time.Now()
+
+	for {
+		// Check if timeout exceeded
+		if time.Since(startTime) > maxWaitTime {
+			return fmt.Errorf("login timeout - please try again")
+		}
+
+		time.Sleep(checkInterval)
+
+		// Check current URL
+		var currentURL string
+		if err := chromedp.Run(m.ctx, chromedp.Location(&currentURL)); err != nil {
+			fmt.Printf("⚠️  Error getting URL: %v\n", err)
+			continue
+		}
+
+		fmt.Printf("🔍 Current URL: %s\n", currentURL)
+
+		// If no longer on login page, check if actually logged in
+		if !contains(currentURL, "/buyer/login") {
+			fmt.Println("📍 Not on login page anymore, checking if logged in...")
+
+			// Try multiple methods to detect login
+			var userExists bool
+
+			// Method 1: Check for common user menu elements
+			err := chromedp.Run(m.ctx,
+				chromedp.Evaluate(`
+					!!document.querySelector('[data-testid="account-menu"]') ||
+					!!document.querySelector('.navbar__username') ||
+					!!document.querySelector('a[href*="/user/account"]') ||
+					!!document.querySelector('.shopee-avatar') ||
+					!!document.cookie.includes('SPC_')
+				`, &userExists),
+			)
+
+			if err == nil && userExists {
+				fmt.Println("✅ Login detected! Saving session...")
+				m.isLoggedIn = true
+				return m.SaveSession()
+			}
+
+			fmt.Println("⏳ Login not confirmed yet, still checking...")
+		}
+	}
 }
 
 // PerformLogin executes the login flow
