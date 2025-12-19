@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/chromedp"
 	"github.com/LLionNg/shopee-livestream-bot/internal/config"
 )
@@ -25,14 +26,17 @@ func Initialize(ctx context.Context, cfg *config.Config) (context.Context, conte
 		fmt.Printf("Found Chrome at: %s\n", chromePath)
 	}
 
-	// Build Chrome options from scratch to have full control
+	// Build Chrome options with MOBILE emulation to access Shopee Live
+	// Shopee Live is mobile-only, so we need to pretend to be a mobile device
 	opts := []chromedp.ExecAllocatorOption{
 		chromedp.NoFirstRun,
 		chromedp.NoDefaultBrowserCheck,
 		chromedp.Flag("disable-blink-features", "AutomationControlled"),
 		chromedp.Flag("enable-automation", false),
-		chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
-		chromedp.WindowSize(cfg.Browser.Viewport.Width, cfg.Browser.Viewport.Height),
+		// Mobile user agent - Samsung Galaxy S21 on Android
+		chromedp.UserAgent("Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"),
+		// Mobile viewport size (keep window size for visibility, but viewport will be mobile)
+		chromedp.WindowSize(420, 920), // Typical mobile dimensions
 	}
 
 	// Add Chrome executable path if found
@@ -63,8 +67,13 @@ func Initialize(ctx context.Context, cfg *config.Config) (context.Context, conte
 
 	// Actually start the browser and navigate to a page to make window visible
 	// This ensures Chrome is launched and visible before we return
-	fmt.Println("Launching Chrome browser and opening window...")
+	fmt.Println("Launching Chrome browser in MOBILE MODE...")
+	fmt.Println("📱 Emulating: Samsung Galaxy S21 (Android)")
+
 	err := chromedp.Run(browserCtx,
+		// Set mobile device metrics for proper emulation
+		emulation.SetDeviceMetricsOverride(412, 915, 3.0, true),
+		emulation.SetTouchEmulationEnabled(true),
 		chromedp.Navigate("about:blank"),
 		chromedp.Sleep(500*time.Millisecond), // Give window time to appear
 	)
@@ -75,7 +84,7 @@ func Initialize(ctx context.Context, cfg *config.Config) (context.Context, conte
 		fmt.Println("Make sure Chrome is installed and accessible")
 		return nil, func() {}
 	}
-	fmt.Println("✅ Chrome browser window should now be visible")
+	fmt.Println("✅ Mobile browser emulation ready!")
 
 	// Return a combined cancel function that cleans up all contexts
 	combinedCancel := func() {
