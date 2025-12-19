@@ -1,464 +1,189 @@
-# Shopee Livestream Auto-Purchase Bot - Project Structure
+# Shopee Livestream Bot
 
-## Project Overview
+A Go-based automation tool for monitoring and interacting with Shopee Thailand livestreams. This bot handles authentication, session management, livestream monitoring, and automated purchase execution.
 
-**Project Name:** shopee-livestream-bot  
-**Language:** Go (Golang)  
-**Target:** Shopee Thailand Livestream Flash Sales  
-**Architecture:** Modular, concurrent, production-ready
+## Features
 
----
+- Browser automation using Chrome DevTools Protocol
+- Manual and automated login with session persistence
+- Livestream URL monitoring
+- Automated purchase execution
+- Configurable purchase parameters
+- Structured logging
 
-## Directory Structure
+## Requirements
+
+- Go 1.21 or higher
+- Chrome/Chromium browser
+- Windows/Linux/macOS
+
+## Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/LLionNg/shopee-livestream-bot.git
+cd shopee-livestream-bot
+
+# Install dependencies
+go mod download
+```
+
+## Configuration
+
+### 1. Environment Variables
+
+Copy the example environment file and configure your credentials:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your settings. Leave credentials empty to use manual login mode (supports Facebook, Google, or username/password):
+
+```bash
+SHOPEE_USERNAME=
+SHOPEE_PASSWORD=
+LOG_LEVEL=info
+```
+
+### 2. Bot Configuration
+
+Edit `configs/config.yaml` to configure:
+- Livestream URLs to monitor
+- Browser settings (headless mode, viewport size)
+- Purchase retry settings
+- Logging preferences
+
+See `configs/config.yaml` for detailed configuration options.
+
+## Usage
+
+### Build
+
+```bash
+# Build the binary
+go build -o shopee-bot cmd/bot/main.go
+
+# Or use make
+make build
+```
+
+### Run
+
+```bash
+# Run directly with Go
+go run cmd/bot/main.go
+
+# Or run the built binary
+./shopee-bot
+```
+
+### Manual Login
+
+When credentials are not provided in `.env`, the bot will:
+1. Open Chrome browser window
+2. Navigate to Shopee login page
+3. Wait for you to login manually using any method
+4. Detect successful login automatically
+5. Save session for future runs
+
+## Project Structure
 
 ```
 shopee-livestream-bot/
 ├── cmd/
 │   └── bot/
-│       └── main.go                 # Application entry point
+│       └── main.go              # Application entry point
 ├── internal/
 │   ├── auth/
-│   │   ├── auth.go                 # Authentication logic
-│   │   ├── session.go              # Session management
-│   │   └── cookies.go              # Cookie handling
+│   │   └── auth.go              # Authentication and session management
 │   ├── browser/
-│   │   ├── cdp.go                  # Chrome DevTools Protocol
-│   │   ├── stealth.go              # Anti-detection measures
-│   │   └── fingerprint.go          # Browser fingerprinting
+│   │   └── cdp.go               # Chrome DevTools Protocol integration
+│   ├── config/
+│   │   └── config.go            # Configuration management
 │   ├── livestream/
-│   │   ├── monitor.go              # Livestream monitoring
-│   │   ├── detector.go             # Product availability detection
-│   │   └── parser.go               # HTML/JSON parsing
-│   ├── purchase/
-│   │   ├── executor.go             # Purchase execution
-│   │   ├── cart.go                 # Cart management
-│   │   └── checkout.go             # Checkout flow
-│   ├── proxy/
-│   │   ├── manager.go              # Proxy rotation
-│   │   └── pool.go                 # Proxy pool management
-│   └── config/
-│       ├── config.go               # Configuration management
-│       └── env.go                  # Environment variables
+│   │   └── monitor.go           # Livestream monitoring
+│   └── purchase/
+│       └── executor.go          # Purchase execution logic
 ├── pkg/
-│   ├── logger/
-│   │   └── logger.go               # Structured logging
-│   └── utils/
-│       ├── retry.go                # Retry logic
-│       ├── delay.go                # Human-like delays
-│       └── validators.go           # Input validation
+│   └── logger/
+│       └── logger.go            # Structured logging
 ├── configs/
-│   ├── config.yaml                 # Main configuration
-│   ├── proxies.txt                 # Proxy list
-│   └── user_agents.txt             # User agent list
+│   └── config.yaml              # Main configuration file
 ├── data/
-│   ├── cookies/
-│   │   └── session.json            # Saved cookies
-│   └── logs/
-│       └── app.log                 # Application logs
-├── scripts/
-│   ├── setup.sh                    # Setup script
-│   └── build.sh                    # Build script
-├── tests/
-│   ├── auth_test.go
-│   ├── browser_test.go
-│   └── purchase_test.go
-├── docs/
-│   ├── SETUP.md                    # Setup instructions
-│   ├── USAGE.md                    # Usage guide
-│   └── API.md                      # API documentation
-├── .env.example                    # Environment variables template
-├── .gitignore
-├── go.mod                          # Go module dependencies
-├── go.sum                          # Dependency checksums
-├── Makefile                        # Build automation
-└── README.md                       # Project documentation
+│   ├── browser/                 # Browser session data
+│   └── logs/                    # Application logs
+├── .env.example                 # Environment variables template
+├── Makefile                     # Build automation
+└── README.md
 ```
 
----
+## Development
 
-## Module Breakdown
+### Build Commands
 
-### 1. **cmd/bot/main.go**
-- Application entry point
-- CLI argument parsing
-- Initialization and orchestration
-- Graceful shutdown handling
-
-### 2. **internal/auth/**
-- User authentication
-- Session management
-- Cookie persistence
-- Token refresh
-
-### 3. **internal/browser/**
-- Chrome DevTools Protocol integration
-- Browser automation
-- Anti-detection stealth measures
-- Fingerprint randomization
-
-### 4. **internal/livestream/**
-- Monitor livestream URLs
-- Detect product availability
-- Parse product information
-- Event-driven architecture
-
-### 5. **internal/purchase/**
-- Fast checkout execution
-- Cart management
-- Payment processing
-- Order confirmation
-
-### 6. **internal/proxy/**
-- Proxy rotation
-- Health checking
-- Connection pooling
-- Geographic targeting
-
-### 7. **internal/config/**
-- Configuration loading
-- Environment management
-- Settings validation
-
-### 8. **pkg/logger/**
-- Structured logging
-- Log levels
-- Output formatting
-
-### 9. **pkg/utils/**
-- Retry mechanisms
-- Random delays
-- Validation helpers
-
----
-
-## Go Dependencies (go.mod)
-
-```go
-module github.com/LLionNg/shopee-livestream-bot
-
-go 1.21
-
-require (
-    // Browser automation
-    github.com/chromedp/chromedp v0.9.3
-    github.com/chromedp/cdproto v0.0.0-20231205062650-00455a960d61
-    
-    // HTTP & Networking
-    github.com/go-resty/resty/v2 v2.11.0
-    golang.org/x/net v0.19.0
-    
-    // Configuration
-    github.com/spf13/viper v1.18.2
-    github.com/joho/godotenv v1.5.1
-    
-    // Logging
-    github.com/sirupsen/logrus v1.9.3
-    go.uber.org/zap v1.26.0
-    
-    // CLI
-    github.com/spf13/cobra v1.8.0
-    
-    // Utilities
-    github.com/google/uuid v1.5.0
-    github.com/tidwall/gjson v1.17.0
-    github.com/PuerkitoBio/goquery v1.8.1
-    
-    // Concurrency
-    golang.org/x/sync v0.5.0
-    
-    // Anti-detection
-    github.com/EDDYCJY/fake-useragent v0.2.0
-)
-```
-
----
-
-## Configuration Files
-
-### config.yaml
-```yaml
-app:
-  name: "Shopee Livestream Bot"
-  version: "1.0.0"
-  environment: "development"
-
-shopee:
-  base_url: "https://shopee.co.th"
-  api_url: "https://shopee.co.th/api/v4"
-  livestream_urls:
-    - "https://live.shopee.co.th/..."
-  
-  credentials:
-    username: "${SHOPEE_USERNAME}"
-    password: "${SHOPEE_PASSWORD}"
-    phone: "${SHOPEE_PHONE}"
-
-browser:
-  headless: false  # Set to true for production
-  timeout: 30
-  user_data_dir: "./data/browser"
-  
-  viewport:
-    width: 1920
-    height: 1080
-
-purchase:
-  max_retries: 3
-  retry_delay: 1  # seconds
-  checkout_timeout: 5  # seconds
-  
-  auto_checkout: true
-  pre_fill_cart: true
-  
-  payment_method: "ShopeePay"  # or "COD", "Credit Card"
-
-proxy:
-  enabled: true
-  rotate: true
-  rotation_interval: 300  # seconds
-  type: "residential"  # or "datacenter"
-  
-  list_file: "./configs/proxies.txt"
-  
-  test_on_startup: true
-  health_check_interval: 60
-
-stealth:
-  randomize_fingerprint: true
-  random_delays: true
-  delay_range:
-    min: 100  # milliseconds
-    max: 500
-  
-  user_agents_file: "./configs/user_agents.txt"
-
-monitoring:
-  check_interval: 1  # seconds
-  max_concurrent_streams: 5
-  
-  notifications:
-    enabled: true
-    webhook_url: "${WEBHOOK_URL}"
-
-logging:
-  level: "info"  # debug, info, warn, error
-  format: "json"  # json or text
-  output: "./data/logs/app.log"
-  
-  console_output: true
-  max_size: 100  # MB
-  max_backups: 5
-  max_age: 30  # days
-```
-
-### .env.example
 ```bash
-# Shopee Credentials
-SHOPEE_USERNAME=your_email@example.com
-SHOPEE_PASSWORD=your_password
-SHOPEE_PHONE=+66812345678
-
-# Proxy Configuration (optional)
-PROXY_URL=http://username:password@proxy.example.com:8080
-
-# Notifications (optional)
-WEBHOOK_URL=https://discord.com/api/webhooks/...
-TELEGRAM_BOT_TOKEN=your_token
-TELEGRAM_CHAT_ID=your_chat_id
-
-# Application Settings
-ENV=development
-LOG_LEVEL=info
-```
-
----
-
-## Core Features
-
-### Phase 1 - MVP (Minimum Viable Product)
-- ✅ Browser automation with CDP
-- ✅ Login and session management
-- ✅ Single livestream monitoring
-- ✅ Basic purchase execution
-- ✅ Configuration management
-- ✅ Logging
-
-### Phase 2 - Enhanced Features
-- ✅ Multiple livestream monitoring
-- ✅ Proxy rotation
-- ✅ Anti-detection measures
-- ✅ Retry mechanisms
-- ✅ Error recovery
-
-### Phase 3 - Advanced Features
-- ✅ Predictive monitoring (ML-based timing)
-- ✅ Multi-account support
-- ✅ Advanced fingerprinting
-- ✅ Performance optimization
-- ✅ Dashboard/UI
-
----
-
-## Development Workflow
-
-### 1. Setup Development Environment
-```bash
-# Install Go (1.21+)
-# Install Chrome/Chromium
-
-# Clone repository
-git clone <repo>
-cd shopee-livestream-bot
-
-# Install dependencies
-go mod download
-
-# Copy environment file
-cp .env.example .env
-
-# Edit configuration
-nano .env
-nano configs/config.yaml
-```
-
-### 2. Build Project
-```bash
-# Build binary
-go build -o bin/bot cmd/bot/main.go
-
-# Or use Makefile
+# Build for current platform
 make build
+
+# Build for Linux
+make build-linux
+
+# Build for Windows
+make build-windows
+
+# Build for all platforms
+make build-all
 ```
 
-### 3. Run Tests
+### Running Tests
+
 ```bash
 # Run all tests
 go test ./...
-
-# Run specific module tests
-go test ./internal/auth/...
 
 # Run with coverage
 go test -cover ./...
 ```
 
-### 4. Run Application
+### Code Formatting
+
 ```bash
-# Development mode
-go run cmd/bot/main.go
+# Format code
+make fmt
 
-# Production mode (built binary)
-./bin/bot
-
-# With flags
-./bin/bot --config=configs/config.yaml --env=production
+# Run go vet
+make vet
 ```
 
----
+## Dependencies
 
-## Testing Strategy
+This project uses the following main dependencies:
 
-### Unit Tests
-- Test individual functions
-- Mock external dependencies
-- Focus on business logic
+- **chromedp/chromedp** - Chrome DevTools Protocol for browser automation
+- **chromedp/cdproto** - Chrome DevTools Protocol definitions
+- **spf13/viper** - Configuration management
+- **joho/godotenv** - Environment variable loading
+- **golang.org/x/sync** - Concurrency utilities
 
-### Integration Tests
-- Test module interactions
-- Real browser automation (slower)
-- Configuration loading
+For a complete list, see `go.mod`.
 
-### End-to-End Tests
-- Test complete purchase flow
-- Use test livestreams
-- Verify success metrics
+## Troubleshooting
 
----
+### Browser Not Opening
 
-## Performance Targets
+Ensure Chrome/Chromium is installed and accessible in your system PATH.
 
-| Metric | Target | Current |
-|--------|--------|---------|
-| Startup Time | < 5s | - |
-| Login Time | < 3s | - |
-| Purchase Execution | < 2s | - |
-| Memory Usage | < 500MB | - |
-| CPU Usage | < 50% | - |
-| Success Rate | > 80% | - |
+### Login Fails
 
----
+- Check your credentials in `.env`
+- Try manual login mode (leave credentials empty)
+- Clear browser data in `data/browser/` directory
 
-## Security Considerations
+### Session Expired
 
-1. **Credentials**: Never commit credentials to git
-2. **Cookies**: Encrypt session cookies
-3. **Proxies**: Validate proxy sources
-4. **Logs**: Sanitize sensitive data from logs
-5. **Rate Limiting**: Respect Shopee's limits
+The bot saves sessions in `data/browser/`. If login fails, delete this directory to force a fresh login.
 
----
+## License
 
-## Deployment
-
-### Local Development
-```bash
-go run cmd/bot/main.go
-```
-
-### Production (VPS)
-```bash
-# Build for Linux
-GOOS=linux GOARCH=amd64 go build -o bin/bot-linux cmd/bot/main.go
-
-# Transfer to server
-scp bin/bot-linux user@server:/opt/shopee-bot/
-
-# Run as service (systemd)
-sudo systemctl start shopee-bot
-```
-
-### Docker (Optional)
-```dockerfile
-FROM golang:1.21-alpine AS builder
-WORKDIR /app
-COPY . .
-RUN go build -o bot cmd/bot/main.go
-
-FROM chromium:latest
-COPY --from=builder /app/bot /bot
-CMD ["/bot"]
-```
-
----
-
-## Maintenance
-
-### Regular Tasks
-- Update Go dependencies monthly
-- Monitor proxy health daily
-- Check Shopee's UI changes weekly
-- Review logs for detection patterns
-- Backup session cookies
-
-### When Things Break
-1. Check logs: `tail -f data/logs/app.log`
-2. Verify proxy connectivity
-3. Test authentication manually
-4. Update stealth measures
-5. Check Shopee's TOS updates
-
----
-
-## Next Steps
-
-1. ✅ Review project structure
-2. ⏭️ Implement core modules (next phase)
-3. ⏭️ Write unit tests
-4. ⏭️ Test on real livestreams
-5. ⏭️ Optimize performance
-6. ⏭️ Deploy to production
-
----
-
-**Status:** Project Structure Complete  
-**Ready for:** Module Implementation
+This project is for educational purposes only. Use responsibly and in accordance with Shopee's Terms of Service.
