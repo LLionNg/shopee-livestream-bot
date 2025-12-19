@@ -17,7 +17,7 @@ A Go-based automation tool for monitoring and interacting with Shopee Thailand l
 - Chrome/Chromium browser
 - Windows/Linux/macOS
 
-## Installation
+## Quick Start
 
 ```bash
 # Clone the repository
@@ -26,6 +26,16 @@ cd shopee-livestream-bot
 
 # Install dependencies
 go mod download
+
+# Clean up dependencies (Optional)
+go mod tidy
+
+# Set up configuration
+cp .env.example .env
+# Edit configs/config.yaml with your livestream URLs
+
+# Run the bot
+go run cmd/bot/main.go
 ```
 
 ## Configuration
@@ -58,24 +68,11 @@ See `configs/config.yaml` for detailed configuration options.
 
 ## Usage
 
-### Build
+### Running the Bot
 
 ```bash
-# Build the binary
-go build -o shopee-bot cmd/bot/main.go
-
-# Or use make
-make build
-```
-
-### Run
-
-```bash
-# Run directly with Go
+# Run directly with Go (recommended)
 go run cmd/bot/main.go
-
-# Or run the built binary
-./shopee-bot
 ```
 
 ### Manual Login
@@ -120,20 +117,25 @@ shopee-livestream-bot/
 
 ## Development
 
-### Build Commands
+### Build Commands (Not Fully Tested)
 
 ```bash
-# Build for current platform
-make build
+# Build binary manually
+go build -o shopee-bot cmd/bot/main.go
 
-# Build for Linux
-make build-linux
+# Or use Makefile (untested)
+make build           # Current platform
+make build-linux     # Linux
+make build-windows   # Windows
+make build-all       # All platforms
+```
 
-# Build for Windows
-make build-windows
+### Docker (Alternative)
 
-# Build for all platforms
-make build-all
+```bash
+# Build and run with Docker (not fully tested)
+docker build -t shopee-bot .
+docker run -v $(pwd)/data:/app/data shopee-bot
 ```
 
 ### Running Tests
